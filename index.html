@@ -14,7 +14,7 @@
     <!-- Tailwind 커스텀 설정 (지진 흔들림 애니메이션 및 동적 클래스 안전목록) -->
     <script>
         tailwind.config = {
-            safelist: ['scale-[1.02]', 'scale-[0.99]'], // JS에서 동적으로 주입되는 클래스가 누락되지 않도록 강제 포함
+            safelist: ['scale-[1.02]', 'scale-[0.99]'],
             theme: {
                 extend: {
                     keyframes: {
@@ -152,35 +152,67 @@
             <div class="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
                 <h2 class="text-xl font-bold mb-6 border-b pb-2">지반 단면도 시각화</h2>
                 
-                <div class="flex-1 relative bg-sky-50 rounded-xl overflow-hidden border-2 border-gray-200 min-h-[400px]">
+                <div class="flex-1 relative bg-sky-50 rounded-xl overflow-hidden border-2 border-gray-200 min-h-[500px]">
                     
                     <!-- 애니메이션 래퍼 (지진 발생 시 흔들림) -->
                     <div id="simWrapper" class="w-full h-full relative transition-transform duration-300">
                         
-                        <!-- 하늘 배경 -->
-                        <div class="absolute top-0 left-0 w-full h-[20%] bg-gradient-to-b from-sky-200 to-sky-50"></div>
+                        <!-- 하늘 배경 (기존 20% -> 33%로 확장하여 건물이 더 잘 보이게) -->
+                        <div class="absolute top-0 left-0 w-full h-[33%] bg-gradient-to-b from-sky-200 to-sky-50"></div>
 
-                        <!-- 건축물 -->
-                        <div class="absolute top-[20%] left-1/2 -translate-x-1/2 -translate-y-full flex flex-col items-center z-20">
-                            <div class="w-24 h-32 bg-gray-800 rounded-t-lg relative border-4 border-gray-900 shadow-xl">
-                                <!-- 창문 디테일 -->
-                                <div class="grid grid-cols-2 gap-2 p-3">
-                                    <div class="h-4 bg-yellow-200/80 rounded-sm"></div>
-                                    <div class="h-4 bg-yellow-200/80 rounded-sm"></div>
-                                    <div class="h-4 bg-yellow-200/80 rounded-sm"></div>
-                                    <div class="h-4 bg-blue-900/30 rounded-sm"></div>
-                                    <div class="h-4 bg-blue-900/30 rounded-sm"></div>
-                                    <div class="h-4 bg-yellow-200/80 rounded-sm"></div>
+                        <!-- 건축물 (크기를 키우고 붕괴 연출을 위한 내부 래퍼 추가) -->
+                        <div class="absolute top-[33%] left-1/2 -translate-x-1/2 -translate-y-full flex flex-col items-center z-20">
+                            
+                            <!-- 기울어짐 연출을 위한 컨테이너 -->
+                            <div id="buildingVisual" class="flex flex-col items-center transition-transform duration-1000 ease-in-out origin-bottom">
+                                <!-- 본 건물 (크기 확대) -->
+                                <div class="w-32 h-48 sm:w-40 sm:h-56 bg-gray-800 rounded-t-lg relative border-4 border-gray-900 shadow-xl overflow-hidden">
+                                    <!-- 창문 디테일 (3열 배치) -->
+                                    <div class="grid grid-cols-3 gap-3 p-4">
+                                        <div class="h-6 sm:h-8 bg-yellow-200/80 rounded-sm"></div>
+                                        <div class="h-6 sm:h-8 bg-yellow-200/80 rounded-sm"></div>
+                                        <div class="h-6 sm:h-8 bg-yellow-200/80 rounded-sm"></div>
+                                        
+                                        <div class="h-6 sm:h-8 bg-blue-900/30 rounded-sm"></div>
+                                        <div class="h-6 sm:h-8 bg-blue-900/30 rounded-sm"></div>
+                                        <div class="h-6 sm:h-8 bg-blue-900/30 rounded-sm"></div>
+                                        
+                                        <div class="h-6 sm:h-8 bg-yellow-200/80 rounded-sm"></div>
+                                        <div class="h-6 sm:h-8 bg-yellow-200/80 rounded-sm"></div>
+                                        <div class="h-6 sm:h-8 bg-blue-900/30 rounded-sm"></div>
+                                        
+                                        <div class="h-6 sm:h-8 bg-blue-900/30 rounded-sm"></div>
+                                        <div class="h-6 sm:h-8 bg-blue-900/30 rounded-sm"></div>
+                                        <div class="h-6 sm:h-8 bg-yellow-200/80 rounded-sm"></div>
+                                    </div>
+
+                                    <!-- 크랙 레이어: 주의 (Warning) 단계 -->
+                                    <svg id="crackWarning" class="absolute inset-0 w-full h-full text-stone-900 opacity-0 transition-opacity duration-700 z-10 pointer-events-none" viewBox="0 0 100 150" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M 20 0 L 25 30 L 15 50 M 70 150 L 75 120 L 60 90" stroke-linejoin="round" stroke-linecap="round" />
+                                    </svg>
+
+                                    <!-- 크랙 레이어: 위험 (Danger) 단계 - 심각한 파손 -->
+                                    <svg id="crackDanger" class="absolute inset-0 w-full h-full text-black opacity-0 transition-opacity duration-700 z-10 pointer-events-none" viewBox="0 0 100 150" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="3">
+                                        <!-- 굵은 주요 크랙 -->
+                                        <path d="M 40 0 L 50 30 L 35 60 L 55 90 L 40 120 L 60 150" stroke-linejoin="round" stroke-linecap="round" />
+                                        <!-- 잔가지 크랙 -->
+                                        <path d="M 50 30 L 70 40 M 35 60 L 15 70 M 55 90 L 80 100 M 40 120 L 20 130" stroke-linejoin="round" stroke-linecap="round" stroke-width="1.5" />
+                                    </svg>
+                                </div>
+                                
+                                <!-- 기초 구조물 -->
+                                <div class="w-40 sm:w-48 h-3 sm:h-4 bg-gray-600 rounded-sm relative border border-gray-700">
+                                    <!-- 위험 단계 시 기초 파단 연출 -->
+                                    <div id="foundationCrack" class="absolute inset-0 bg-black w-3 h-full left-1/2 opacity-0 transition-opacity duration-700"></div>
                                 </div>
                             </div>
-                            <div class="w-32 h-2 bg-gray-600 rounded-sm"></div> <!-- 기초 -->
                         </div>
 
-                        <!-- 지표면 라인 -->
-                        <div class="absolute top-[20%] left-0 w-full h-1 bg-green-500 z-10"></div>
+                        <!-- 지표면 라인 (33% 위치로 낮춤) -->
+                        <div class="absolute top-[33%] left-0 w-full h-1 bg-green-500 z-10"></div>
 
-                        <!-- 흙 (토층) - 0m ~ 50m 공간 -->
-                        <div class="absolute top-[20%] left-0 w-full h-[80%] bg-[#d2b48c] overflow-hidden">
+                        <!-- 흙 (토층) - 나머지 67% 공간 -->
+                        <div class="absolute top-[33%] left-0 w-full h-[67%] bg-[#d2b48c] overflow-hidden">
                             
                             <!-- 지하수 레벨 -->
                             <div id="visWaterLayer" class="absolute left-0 w-full bg-blue-500/40 transition-all duration-700 ease-out z-10 border-t-2 border-blue-400/80" style="top: 20%; height: 100%;">
@@ -203,8 +235,8 @@
 
                     </div>
 
-                    <!-- 깊이 가이드라인 (스케일) -->
-                    <div class="absolute top-[20%] left-2 h-[80%] flex flex-col justify-between py-1 z-30 pointer-events-none">
+                    <!-- 깊이 가이드라인 (스케일) - 지반과 동일하게 33% 시작, 67% 높이로 조정 -->
+                    <div class="absolute top-[33%] left-2 h-[67%] flex flex-col justify-between py-1 z-30 pointer-events-none">
                         <span class="text-[10px] font-bold text-green-900 bg-white/80 px-1 rounded shadow-sm">0m</span>
                         <span class="text-[10px] font-bold text-gray-700 bg-white/80 px-1 rounded shadow-sm">25m</span>
                         <span class="text-[10px] font-bold text-gray-700 bg-white/80 px-1 rounded shadow-sm">50m</span>
@@ -245,6 +277,12 @@
             document.getElementById('visBedrockLabel').textContent = `암반 깊이: ${bedrockDepth}m`;
             document.getElementById('visWaterLayer').style.top = `${(waterLevel / 50) * 100}%`;
             document.getElementById('visWaterLabel').textContent = `지하수위: ${waterLevel}m`;
+
+            // 설정이 변경되면 크랙 및 붕괴 상태 초기화
+            document.getElementById('crackWarning').style.opacity = '0';
+            document.getElementById('crackDanger').style.opacity = '0';
+            document.getElementById('foundationCrack').style.opacity = '0';
+            document.getElementById('buildingVisual').style.transform = 'rotate(0deg)';
 
             // 위험도 계산 로직 (React 원본 동일)
             let ampRisk = (bedrockDepth / 50) * 100;
@@ -296,7 +334,6 @@
 
             const wrapper = document.getElementById('simWrapper');
             const btnSpan = simulateBtn.querySelector('span');
-            // FIX: lucide.createIcons() 실행 후 <i> 태그가 <svg>로 변경되므로 svg 요소를 찾도록 수정
             const btnIcon = simulateBtn.querySelector('svg'); 
 
             // 버튼 상태 변경
@@ -315,7 +352,20 @@
             wrapper.classList.add(animClass);
             if(scaleClass) wrapper.classList.add(scaleClass);
 
-            // 2.5초 후 초기화
+            // 지진 흔들림 도중(0.6초 후) 크랙 및 붕괴 발생 연출
+            setTimeout(() => {
+                if (currentStatus === 'Warning') {
+                    // 주의: 경미한 크랙
+                    document.getElementById('crackWarning').style.opacity = '0.8';
+                } else if (currentStatus === 'Danger') {
+                    // 위험: 심각한 크랙 및 건물이 8도 가량 기울어짐 (붕괴)
+                    document.getElementById('crackDanger').style.opacity = '1';
+                    document.getElementById('foundationCrack').style.opacity = '1';
+                    document.getElementById('buildingVisual').style.transform = 'rotate(8deg)';
+                }
+            }, 600);
+
+            // 2.5초 후 흔들림 종료 (크랙은 슬라이더를 움직일 때까지 유지됨)
             setTimeout(() => {
                 isShaking = false;
                 wrapper.classList.remove(animClass);
