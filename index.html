@@ -11,9 +11,10 @@
     <!-- Lucide Icons (CDN) -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Tailwind 커스텀 설정 (지진 흔들림 애니메이션) -->
+    <!-- Tailwind 커스텀 설정 (지진 흔들림 애니메이션 및 동적 클래스 안전목록) -->
     <script>
         tailwind.config = {
+            safelist: ['scale-[1.02]', 'scale-[0.99]'], // JS에서 동적으로 주입되는 클래스가 누락되지 않도록 강제 포함
             theme: {
                 extend: {
                     keyframes: {
@@ -295,13 +296,14 @@
 
             const wrapper = document.getElementById('simWrapper');
             const btnSpan = simulateBtn.querySelector('span');
-            const btnIcon = simulateBtn.querySelector('i');
+            // FIX: lucide.createIcons() 실행 후 <i> 태그가 <svg>로 변경되므로 svg 요소를 찾도록 수정
+            const btnIcon = simulateBtn.querySelector('svg'); 
 
             // 버튼 상태 변경
             simulateBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
             simulateBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
             btnSpan.textContent = '지진 발생 중...';
-            btnIcon.classList.add('animate-spin');
+            if (btnIcon) btnIcon.classList.add('animate-spin');
 
             // 위험도에 따른 애니메이션 클래스 선택
             let animClass = currentStatus === 'Danger' ? 'animate-shake-danger' :
@@ -322,7 +324,7 @@
                 simulateBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
                 simulateBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
                 btnSpan.textContent = '지진 시뮬레이션 시작';
-                btnIcon.classList.remove('animate-spin');
+                if (btnIcon) btnIcon.classList.remove('animate-spin');
             }, 2500);
         });
 
