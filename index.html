@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>지진 안정성 평가 시뮬레이터</title>
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons (CDN) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind 커스텀 설정 (지진 흔들림 애니메이션) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        shake: {
+                            '0%': { transform: 'translate(1px, 1px) rotate(0deg)' },
+                            '10%': { transform: 'translate(-1px, -2px) rotate(-1deg)' },
+                            '20%': { transform: 'translate(-3px, 0px) rotate(1deg)' },
+                            '30%': { transform: 'translate(3px, 2px) rotate(0deg)' },
+                            '40%': { transform: 'translate(1px, -1px) rotate(1deg)' },
+                            '50%': { transform: 'translate(-1px, 2px) rotate(-1deg)' },
+                            '60%': { transform: 'translate(-3px, 1px) rotate(0deg)' },
+                            '70%': { transform: 'translate(3px, 1px) rotate(-1deg)' },
+                            '80%': { transform: 'translate(-1px, -1px) rotate(1deg)' },
+                            '90%': { transform: 'translate(1px, 2px) rotate(0deg)' },
+                            '100%': { transform: 'translate(1px, -2px) rotate(-1deg)' },
+                        }
+                    },
+                    animation: {
+                        'shake-danger': 'shake 0.1s ease-in-out infinite alternate',
+                        'shake-warning': 'shake 0.2s ease-in-out infinite alternate',
+                        'shake-safe': 'shake 0.4s ease-in-out infinite alternate',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-gray-50 p-6 font-sans text-gray-800">
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- 헤더 -->
+        <header class="text-center pb-4 border-b border-gray-200">
+            <h1 class="text-3xl font-bold flex items-center justify-center gap-2">
+                <i data-lucide="activity" class="w-8 h-8 text-indigo-600"></i>
+                지진 안정성 평가 시뮬레이터
+            </h1>
+            <p class="text-gray-500 mt-2">지하수 수위와 암반 깊이 변화에 따른 건축물 위험도를 확인해보세요.</p>
+        </header>
+
+        <div class="grid lg:grid-cols-12 gap-8">
+            
+            <!-- 왼쪽 패널: 컨트롤 & 결과 -->
+            <div class="lg:col-span-5 space-y-6">
+                
+                <!-- 컨트롤러 -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h2 class="text-xl font-bold mb-6 border-b pb-2">지반 환경 설정</h2>
+                    
+                    <div class="space-y-8">
+                        <!-- 암반 깊이 슬라이더 -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <label class="font-semibold text-gray-700 flex items-center gap-2">
+                                    <i data-lucide="mountain" class="w-5 h-5 text-stone-600"></i>
+                                    암반 깊이 (토층 두께)
+                                </label>
+                                <span id="bedrockLabel" class="font-mono bg-stone-100 text-stone-700 px-3 py-1 rounded-full text-sm font-bold">
+                                    25 m
+                                </span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="bedrockSlider"
+                                min="1" max="50" 
+                                value="25"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-stone-600"
+                            >
+                            <p class="text-xs text-gray-500">값이 클수록 연약한 흙이 두껍게 쌓여 있어 지진파가 증폭됩니다.</p>
+                        </div>
+
+                        <!-- 지하수 수위 슬라이더 -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <label class="font-semibold text-gray-700 flex items-center gap-2">
+                                    <i data-lucide="droplets" class="w-5 h-5 text-blue-500"></i>
+                                    지하수 수위 (지표면 기준)
+                                </label>
+                                <span id="waterLabel" class="font-mono bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-sm font-bold">
+                                    10 m
+                                </span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="waterSlider"
+                                min="0" max="50" 
+                                value="10"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                            >
+                            <p class="text-xs text-gray-500">0m에 가까울수록 물이 지표면에 있어 액상화 위험이 커집니다.</p>
+                        </div>
+                    </div>
+
+                    <button 
+                        id="simulateBtn"
+                        class="w-full mt-8 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-lg transition-all flex justify-center items-center gap-2"
+                    >
+                        <i data-lucide="activity" class="w-5 h-5"></i>
+                        <span>지진 시뮬레이션 시작</span>
+                    </button>
+                </div>
+
+                <!-- 평가 결과 -->
+                <div id="resultBox" class="p-6 rounded-2xl shadow-sm border transition-colors duration-300">
+                    <div class="flex items-center gap-3 mb-4">
+                        <i id="iconSafe" data-lucide="shield-check" class="w-8 h-8 hidden"></i>
+                        <i id="iconWarning" data-lucide="alert-triangle" class="w-8 h-8 hidden"></i>
+                        <i id="iconDanger" data-lucide="shield-alert" class="w-8 h-8 hidden"></i>
+                        <h2 class="text-2xl font-black">
+                            종합 안정성: <span id="scoreText">100</span>점
+                        </h2>
+                    </div>
+                    
+                    <div class="space-y-3 mt-4 bg-white/60 p-4 rounded-xl">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 font-medium">지반 증폭 위험도:</span>
+                            <span id="ampRiskText" class="font-bold">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="ampBar" class="bg-stone-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+
+                        <div class="flex justify-between items-center mt-4">
+                            <span class="text-gray-700 font-medium">액상화 위험도:</span>
+                            <span id="liqRiskText" class="font-bold">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="liqBar" class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 오른쪽 패널: 시각화 (단면도) -->
+            <div class="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                <h2 class="text-xl font-bold mb-6 border-b pb-2">지반 단면도 시각화</h2>
+                
+                <div class="flex-1 relative bg-sky-50 rounded-xl overflow-hidden border-2 border-gray-200 min-h-[400px]">
+                    
+                    <!-- 애니메이션 래퍼 (지진 발생 시 흔들림) -->
+                    <div id="simWrapper" class="w-full h-full relative transition-transform duration-300">
+                        
+                        <!-- 하늘 배경 -->
+                        <div class="absolute top-0 left-0 w-full h-[20%] bg-gradient-to-b from-sky-200 to-sky-50"></div>
+
+                        <!-- 건축물 -->
+                        <div class="absolute top-[20%] left-1/2 -translate-x-1/2 -translate-y-full flex flex-col items-center z-20">
+                            <div class="w-24 h-32 bg-gray-800 rounded-t-lg relative border-4 border-gray-900 shadow-xl">
+                                <!-- 창문 디테일 -->
+                                <div class="grid grid-cols-2 gap-2 p-3">
+                                    <div class="h-4 bg-yellow-200/80 rounded-sm"></div>
+                                    <div class="h-4 bg-yellow-200/80 rounded-sm"></div>
+                                    <div class="h-4 bg-yellow-200/80 rounded-sm"></div>
+                                    <div class="h-4 bg-blue-900/30 rounded-sm"></div>
+                                    <div class="h-4 bg-blue-900/30 rounded-sm"></div>
+                                    <div class="h-4 bg-yellow-200/80 rounded-sm"></div>
+                                </div>
+                            </div>
+                            <div class="w-32 h-2 bg-gray-600 rounded-sm"></div> <!-- 기초 -->
+                        </div>
+
+                        <!-- 지표면 라인 -->
+                        <div class="absolute top-[20%] left-0 w-full h-1 bg-green-500 z-10"></div>
+
+                        <!-- 흙 (토층) - 0m ~ 50m 공간 -->
+                        <div class="absolute top-[20%] left-0 w-full h-[80%] bg-[#d2b48c] overflow-hidden">
+                            
+                            <!-- 지하수 레벨 -->
+                            <div id="visWaterLayer" class="absolute left-0 w-full bg-blue-500/40 transition-all duration-700 ease-out z-10 border-t-2 border-blue-400/80" style="top: 20%; height: 100%;">
+                                <div class="w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPjxyZWN0IHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9InRyYW5zcGFyZW50Ij48L3JlY3Q+PHBhdGggZD0iTTAgMEw4IDhaTTAgOEw4IDBaIiBzdHJva2U9IiNmZmZmZmYyMiIgc3Ryb2tlLXdpZHRoPSIxIj48L3BhdGg+PC9zdmc+')] opacity-50"></div>
+                                <div id="visWaterLabel" class="absolute top-1 right-2 bg-blue-600/80 text-white text-xs font-bold px-2 py-0.5 rounded shadow backdrop-blur-sm">
+                                    지하수위: 10m
+                                </div>
+                            </div>
+
+                            <!-- 암반 레벨 -->
+                            <div id="visBedrockLayer" class="absolute left-0 w-full bg-stone-700 transition-all duration-700 ease-out z-20 border-t-4 border-stone-800" style="top: 50%; height: 100%;">
+                                <div class="w-full h-full opacity-30 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHBhdGggZD0iTTAgMEwyMCAyMFoiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTIwIDBMMCAyMFoiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+PC9zdmc+')]"></div>
+                                <div class="text-stone-400/50 font-bold text-center mt-4 tracking-widest uppercase">Solid Bedrock</div>
+                                <div id="visBedrockLabel" class="absolute top-1 right-2 bg-stone-800/80 text-stone-100 text-xs font-bold px-2 py-0.5 rounded shadow backdrop-blur-sm">
+                                    암반 깊이: 25m
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- 깊이 가이드라인 (스케일) -->
+                    <div class="absolute top-[20%] left-2 h-[80%] flex flex-col justify-between py-1 z-30 pointer-events-none">
+                        <span class="text-[10px] font-bold text-green-900 bg-white/80 px-1 rounded shadow-sm">0m</span>
+                        <span class="text-[10px] font-bold text-gray-700 bg-white/80 px-1 rounded shadow-sm">25m</span>
+                        <span class="text-[10px] font-bold text-gray-700 bg-white/80 px-1 rounded shadow-sm">50m</span>
+                    </div>
+
+                </div>
+
+                <div class="mt-4 text-sm text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <p>💡 <strong>해석 가이드:</strong> 흙(갈색) 부분에 지하수(파란색)가 겹쳐진 영역이 두꺼울수록, 그리고 그 영역이 지표면(0m)에 가까울수록 액상화로 인한 건물 붕괴 위험이 기하급수적으로 증가합니다. 반대로 건물의 기초가 암반(회색)에 가깝게 위치할수록 흔들림(증폭)이 최소화됩니다.</p>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- 스크립트 (로직) -->
+    <script>
+        // 초기 설정
+        lucide.createIcons();
+        let currentStatus = 'Safe';
+        let isShaking = false;
+
+        const bedrockSlider = document.getElementById('bedrockSlider');
+        const waterSlider = document.getElementById('waterSlider');
+        const simulateBtn = document.getElementById('simulateBtn');
+
+        // 상태 업데이트 로직
+        function updateSimulation() {
+            const bedrockDepth = parseInt(bedrockSlider.value);
+            const waterLevel = parseInt(waterSlider.value);
+
+            // 라벨 업데이트
+            document.getElementById('bedrockLabel').textContent = bedrockDepth + ' m';
+            document.getElementById('waterLabel').textContent = waterLevel + ' m';
+            
+            // 시각화 레이어 업데이트
+            document.getElementById('visBedrockLayer').style.top = `${(bedrockDepth / 50) * 100}%`;
+            document.getElementById('visBedrockLabel').textContent = `암반 깊이: ${bedrockDepth}m`;
+            document.getElementById('visWaterLayer').style.top = `${(waterLevel / 50) * 100}%`;
+            document.getElementById('visWaterLabel').textContent = `지하수위: ${waterLevel}m`;
+
+            // 위험도 계산 로직 (React 원본 동일)
+            let ampRisk = (bedrockDepth / 50) * 100;
+            let liqRisk = 0;
+
+            if (waterLevel < bedrockDepth) {
+                const saturatedSoil = bedrockDepth - waterLevel;
+                const shallowWaterFactor = Math.max(0, 20 - waterLevel) / 20; 
+                const soilFactor = Math.min(saturatedSoil, 20) / 20;
+                liqRisk = shallowWaterFactor * soilFactor * 100;
+            }
+
+            const totalRisk = (ampRisk * 0.4) + (liqRisk * 0.6);
+            let score = 100 - totalRisk;
+            score = Math.max(0, Math.min(100, Math.round(score)));
+            
+            ampRisk = Math.round(ampRisk);
+            liqRisk = Math.round(liqRisk);
+
+            // 상태 결정
+            if (score >= 70) currentStatus = 'Safe';
+            else if (score >= 40) currentStatus = 'Warning';
+            else currentStatus = 'Danger';
+
+            // 결과 패널 업데이트
+            document.getElementById('scoreText').textContent = score;
+            document.getElementById('ampRiskText').textContent = ampRisk + '%';
+            document.getElementById('ampBar').style.width = ampRisk + '%';
+            document.getElementById('liqRiskText').textContent = liqRisk + '%';
+            document.getElementById('liqBar').style.width = liqRisk + '%';
+
+            // 결과 박스 디자인 변경
+            const resultBox = document.getElementById('resultBox');
+            resultBox.className = 'p-6 rounded-2xl shadow-sm border transition-colors duration-300 ' + 
+                (currentStatus === 'Safe' ? 'text-green-600 bg-green-100 border-green-200' :
+                 currentStatus === 'Warning' ? 'text-amber-600 bg-amber-100 border-amber-200' :
+                 'text-red-600 bg-red-100 border-red-200');
+
+            // 아이콘 토글
+            document.getElementById('iconSafe').style.display = currentStatus === 'Safe' ? 'block' : 'none';
+            document.getElementById('iconWarning').style.display = currentStatus === 'Warning' ? 'block' : 'none';
+            document.getElementById('iconDanger').style.display = currentStatus === 'Danger' ? 'block' : 'none';
+        }
+
+        // 지진 시뮬레이션 버튼 이벤트
+        simulateBtn.addEventListener('click', () => {
+            if (isShaking) return;
+            isShaking = true;
+
+            const wrapper = document.getElementById('simWrapper');
+            const btnSpan = simulateBtn.querySelector('span');
+            const btnIcon = simulateBtn.querySelector('i');
+
+            // 버튼 상태 변경
+            simulateBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+            simulateBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+            btnSpan.textContent = '지진 발생 중...';
+            btnIcon.classList.add('animate-spin');
+
+            // 위험도에 따른 애니메이션 클래스 선택
+            let animClass = currentStatus === 'Danger' ? 'animate-shake-danger' :
+                            currentStatus === 'Warning' ? 'animate-shake-warning' :
+                            'animate-shake-safe';
+            let scaleClass = currentStatus === 'Danger' ? 'scale-[1.02]' :
+                             currentStatus === 'Safe' ? 'scale-[0.99]' : '';
+
+            wrapper.classList.add(animClass);
+            if(scaleClass) wrapper.classList.add(scaleClass);
+
+            // 2.5초 후 초기화
+            setTimeout(() => {
+                isShaking = false;
+                wrapper.classList.remove(animClass);
+                if(scaleClass) wrapper.classList.remove(scaleClass);
+
+                simulateBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                simulateBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                btnSpan.textContent = '지진 시뮬레이션 시작';
+                btnIcon.classList.remove('animate-spin');
+            }, 2500);
+        });
+
+        // 슬라이더 이벤트 리스너 등록
+        bedrockSlider.addEventListener('input', updateSimulation);
+        waterSlider.addEventListener('input', updateSimulation);
+
+        // 최초 실행
+        updateSimulation();
+    </script>
+</body>
+</html>
