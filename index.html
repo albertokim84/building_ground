@@ -14,7 +14,7 @@
     <!-- Tailwind 커스텀 설정 (지진 흔들림 애니메이션 및 동적 클래스 안전목록) -->
     <script>
         tailwind.config = {
-            safelist: ['scale-[1.02]', 'scale-[0.99]'],
+            safelist: ['scale-[1.02]', 'scale-[0.99]', 'bg-yellow-700/60', 'border-yellow-600/80', 'bg-red-600/90'],
             theme: {
                 extend: {
                     keyframes: {
@@ -51,7 +51,7 @@
                 <i data-lucide="activity" class="w-8 h-8 text-indigo-600"></i>
                 지진 안정성 평가 시뮬레이터
             </h1>
-            <p class="text-gray-500 mt-2">지하수 수위와 암반 깊이 변화에 따른 기초 방식별 건축물 위험도를 확인해보세요.</p>
+            <p class="text-gray-500 mt-2">지진 강도, 지하수위, 암반 깊이에 따른 기초 방식별 건축물 위험도를 확인해보세요.</p>
         </header>
 
         <div class="grid lg:grid-cols-12 gap-8">
@@ -61,11 +61,32 @@
                 
                 <!-- 컨트롤러 -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h2 class="text-xl font-bold mb-6 border-b pb-2">지반 환경 설정</h2>
+                    <h2 class="text-xl font-bold mb-6 border-b pb-2">시뮬레이션 환경 설정</h2>
                     
                     <div class="space-y-8">
-                        <!-- 암반 깊이 슬라이더 -->
+                        <!-- 지진 강도 슬라이더 -->
                         <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <label class="font-semibold text-gray-700 flex items-center gap-2">
+                                    <i data-lucide="zap" class="w-5 h-5 text-yellow-500"></i>
+                                    지진 강도 (규모)
+                                </label>
+                                <span id="intensityLabel" class="font-mono bg-yellow-50 text-yellow-600 px-3 py-1 rounded-full text-sm font-bold">
+                                    7.0
+                                </span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="intensitySlider"
+                                min="3.0" max="9.0" step="0.5"
+                                value="7.0"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                            >
+                            <p class="text-xs text-gray-500">강도가 낮으면 버티기 쉬우나, 6.0 이상 강진부터는 지반 상태에 따라 치명적인 피해가 발생합니다.</p>
+                        </div>
+
+                        <!-- 암반 깊이 슬라이더 -->
+                        <div class="space-y-3 pt-2 border-t border-gray-100">
                             <div class="flex justify-between items-center">
                                 <label class="font-semibold text-gray-700 flex items-center gap-2">
                                     <i data-lucide="mountain" class="w-5 h-5 text-stone-600"></i>
@@ -157,23 +178,18 @@
                     <!-- 애니메이션 래퍼 (지진 발생 시 지반 전체 흔들림) -->
                     <div id="simWrapper" class="w-full h-full relative transition-transform duration-300">
                         
-                        <!-- 하늘 배경 (50%로 확장) -->
+                        <!-- 하늘 배경 -->
                         <div class="absolute top-0 left-0 w-full h-[50%] bg-gradient-to-b from-sky-200 to-sky-50"></div>
 
                         <!-- ============================================== -->
                         <!-- 건축물 1: 기초 파일 적용 (왼쪽 30% 위치) -->
                         <!-- ============================================== -->
                         <div class="absolute top-[50%] left-[30%] -translate-x-1/2 -translate-y-full flex flex-col items-center z-20">
-                            
-                            <!-- 라벨 -->
                             <div class="text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-50/90 border border-indigo-200 px-2 py-1 rounded-md mb-2 shadow-sm whitespace-nowrap">
                                 파일 기초 (내진 설계)
                             </div>
-
-                            <!-- 기울어짐 연출 컨테이너 -->
                             <div id="buildingVisualPile" class="flex flex-col items-center transition-transform duration-1000 ease-in-out origin-bottom">
                                 <div class="w-28 h-40 sm:w-36 sm:h-48 bg-gray-800 rounded-t-lg relative border-4 border-gray-900 shadow-xl overflow-hidden">
-                                    <!-- 창문 디테일 -->
                                     <div class="grid grid-cols-3 gap-2 sm:gap-3 p-3 sm:p-4">
                                         <div class="h-5 sm:h-7 bg-yellow-200/80 rounded-sm"></div>
                                         <div class="h-5 sm:h-7 bg-yellow-200/80 rounded-sm"></div>
@@ -185,40 +201,28 @@
                                         <div class="h-5 sm:h-7 bg-yellow-200/80 rounded-sm"></div>
                                         <div class="h-5 sm:h-7 bg-blue-900/30 rounded-sm"></div>
                                     </div>
-
-                                    <!-- 파일 기초 건물용 크랙: 주의 (Warning) 단계 - 경미함 -->
                                     <svg id="crackWarningPile" class="absolute inset-0 w-full h-full text-white opacity-0 transition-opacity duration-700 z-10 pointer-events-none" viewBox="0 0 100 150" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="1.5">
                                         <path d="M 20 150 L 25 130" stroke-linejoin="round" stroke-linecap="round" />
                                     </svg>
-
-                                    <!-- 파일 기초 건물용 크랙: 위험 (Danger) 단계 - 상대적으로 적은 크랙 -->
                                     <svg id="crackDangerPile" class="absolute inset-0 w-full h-full text-white opacity-0 transition-opacity duration-700 z-10 pointer-events-none" viewBox="0 0 100 150" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M 30 150 L 40 110 L 35 90 M 70 150 L 65 120" stroke-linejoin="round" stroke-linecap="round" />
                                     </svg>
                                 </div>
-                                
-                                <!-- 기초 구조물 -->
                                 <div class="w-36 sm:w-44 h-3 sm:h-4 bg-gray-600 rounded-sm relative border border-gray-700">
                                     <div id="foundationCrackPile" class="absolute inset-0 bg-white w-2 h-full left-1/3 opacity-0 transition-opacity duration-700"></div>
                                 </div>
                             </div>
                         </div>
 
-
                         <!-- ============================================== -->
                         <!-- 건축물 2: 파일 없음 (오른쪽 70% 위치, 기존과 동일) -->
                         <!-- ============================================== -->
                         <div class="absolute top-[50%] left-[70%] -translate-x-1/2 -translate-y-full flex flex-col items-center z-20">
-                            
-                            <!-- 라벨 -->
                             <div class="text-xs sm:text-sm font-bold text-stone-700 bg-white/90 border border-stone-200 px-2 py-1 rounded-md mb-2 shadow-sm whitespace-nowrap">
                                 일반 기초 (파일 없음)
                             </div>
-
-                            <!-- 기울어짐 연출 컨테이너 -->
                             <div id="buildingVisualNoPile" class="flex flex-col items-center transition-transform duration-1000 ease-in-out origin-bottom">
                                 <div class="w-28 h-40 sm:w-36 sm:h-48 bg-gray-800 rounded-t-lg relative border-4 border-gray-900 shadow-xl overflow-hidden">
-                                    <!-- 창문 디테일 -->
                                     <div class="grid grid-cols-3 gap-2 sm:gap-3 p-3 sm:p-4">
                                         <div class="h-5 sm:h-7 bg-yellow-200/80 rounded-sm"></div>
                                         <div class="h-5 sm:h-7 bg-yellow-200/80 rounded-sm"></div>
@@ -230,20 +234,14 @@
                                         <div class="h-5 sm:h-7 bg-yellow-200/80 rounded-sm"></div>
                                         <div class="h-5 sm:h-7 bg-blue-900/30 rounded-sm"></div>
                                     </div>
-
-                                    <!-- 일반 기초 건물용 크랙: 주의 -->
                                     <svg id="crackWarningNoPile" class="absolute inset-0 w-full h-full text-white opacity-0 transition-opacity duration-700 z-10 pointer-events-none" viewBox="0 0 100 150" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M 20 0 L 25 30 L 15 50 M 70 150 L 75 120 L 60 90" stroke-linejoin="round" stroke-linecap="round" />
                                     </svg>
-
-                                    <!-- 일반 기초 건물용 크랙: 위험 (심각함) -->
                                     <svg id="crackDangerNoPile" class="absolute inset-0 w-full h-full text-white opacity-0 transition-opacity duration-700 z-10 pointer-events-none" viewBox="0 0 100 150" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="3">
                                         <path d="M 40 0 L 50 30 L 35 60 L 55 90 L 40 120 L 60 150" stroke-linejoin="round" stroke-linecap="round" />
                                         <path d="M 50 30 L 70 40 M 35 60 L 15 70 M 55 90 L 80 100 M 40 120 L 20 130" stroke-linejoin="round" stroke-linecap="round" stroke-width="1.5" />
                                     </svg>
                                 </div>
-                                
-                                <!-- 기초 구조물 -->
                                 <div class="w-36 sm:w-44 h-3 sm:h-4 bg-gray-600 rounded-sm relative border border-gray-700">
                                     <div id="foundationCrackNoPile" class="absolute inset-0 bg-white w-3 h-full left-1/2 opacity-0 transition-opacity duration-700"></div>
                                 </div>
@@ -253,19 +251,19 @@
                         <!-- 지표면 라인 (50% 위치) -->
                         <div class="absolute top-[50%] left-0 w-full h-1 bg-green-500 z-10"></div>
 
-                        <!-- 흙 (토층) - 나머지 50% 공간 -->
+                        <!-- 흙 (토층) -->
                         <div class="absolute top-[50%] left-0 w-full h-[50%] bg-[#d2b48c] overflow-hidden">
                             
-                            <!-- 건축물 1의 기초 파일 (Pile) 렌더링 영역 -->
+                            <!-- 건축물 1의 기초 파일 -->
                             <div class="absolute left-[30%] -translate-x-1/2 top-0 w-28 sm:w-36 h-full z-15 flex justify-between px-3 sm:px-4 pointer-events-none">
                                 <div id="pileLeft" class="w-2 sm:w-3 bg-stone-600 border-x border-stone-800 transition-all duration-700 origin-top shadow-sm" style="height: 50%;"></div>
                                 <div id="pileRight" class="w-2 sm:w-3 bg-stone-600 border-x border-stone-800 transition-all duration-700 origin-top shadow-sm" style="height: 50%;"></div>
                             </div>
 
-                            <!-- 지하수 레벨 -->
-                            <div id="visWaterLayer" class="absolute left-0 w-full bg-blue-500/40 transition-all duration-700 ease-out z-10 border-t-2 border-blue-400/80" style="top: 20%; height: 100%;">
+                            <!-- 지하수 레벨 (액상화 시 상승 애니메이션을 위해 transition 적용) -->
+                            <div id="visWaterLayer" class="absolute left-0 w-full bg-blue-500/40 border-t-2 border-blue-400/80 transition-all duration-1000 ease-in-out z-10" style="top: 20%; height: 100%;">
                                 <div class="w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPjxyZWN0IHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9InRyYW5zcGFyZW50Ij48L3JlY3Q+PHBhdGggZD0iTTAgMEw4IDhaTTAgOEw4IDBaIiBzdHJva2U9IiNmZmZmZmYyMiIgc3Ryb2tlLXdpZHRoPSIxIj48L3BhdGg+PC9zdmc+')] opacity-50"></div>
-                                <div id="visWaterLabel" class="absolute top-1 right-2 bg-blue-600/80 text-white text-xs font-bold px-2 py-0.5 rounded shadow backdrop-blur-sm">
+                                <div id="visWaterLabel" class="absolute top-1 right-2 bg-blue-600/80 text-white text-xs font-bold px-2 py-0.5 rounded shadow backdrop-blur-sm transition-colors duration-500">
                                     지하수위: 10m
                                 </div>
                             </div>
@@ -293,7 +291,7 @@
                 </div>
 
                 <div class="mt-4 text-sm text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <p>💡 <strong>해석 가이드:</strong> 두 건물이 동일한 지반 흔들림을 겪더라도, 암반까지 <strong>기초 파일(말뚝)</strong>을 내린 왼쪽 건물은 액상화나 지반 증폭으로부터 훨씬 안전하여 붕괴나 크랙 피해가 확연히 적은 것을 확인할 수 있습니다.</p>
+                    <p>💡 <strong>해석 가이드:</strong> 규모 5.5 이상의 강진 발생 시 지하수위가 얕다면 지표면으로 물과 모래가 분출하는 <strong>액상화(Sand Boil) 현상</strong>이 일어납니다. 지진 강도가 약하면(예: 규모 3~4) 조건이 안 좋아도 건물 피해는 경미합니다.</p>
                 </div>
             </div>
             
@@ -302,32 +300,44 @@
 
     <!-- 스크립트 (로직) -->
     <script>
-        // 초기 설정
         lucide.createIcons();
         let currentStatusNoPile = 'Safe';
         let currentStatusPile = 'Safe';
         let isShaking = false;
+        let globalLiqRisk = 0; // 애니메이션 트리거용 액상화 위험도 전역 변수
 
+        const intensitySlider = document.getElementById('intensitySlider');
         const bedrockSlider = document.getElementById('bedrockSlider');
         const waterSlider = document.getElementById('waterSlider');
         const simulateBtn = document.getElementById('simulateBtn');
 
-        // 상태 업데이트 로직
         function updateSimulation() {
+            if (isShaking) return; // 지진 중에는 값 업데이트 방지 (시각적 일관성)
+
+            const intensity = parseFloat(intensitySlider.value);
             const bedrockDepth = parseInt(bedrockSlider.value);
             const waterLevel = parseInt(waterSlider.value);
 
             // 라벨 업데이트
+            document.getElementById('intensityLabel').textContent = intensity.toFixed(1);
             document.getElementById('bedrockLabel').textContent = bedrockDepth + ' m';
             document.getElementById('waterLabel').textContent = waterLevel + ' m';
             
-            // 시각화 레이어 업데이트
+            // 시각화 레이어 업데이트 (평상시)
+            const waterLayer = document.getElementById('visWaterLayer');
+            const waterLabel = document.getElementById('visWaterLabel');
+            
             document.getElementById('visBedrockLayer').style.top = `${(bedrockDepth / 50) * 100}%`;
             document.getElementById('visBedrockLabel').textContent = `암반 깊이: ${bedrockDepth}m`;
-            document.getElementById('visWaterLayer').style.top = `${(waterLevel / 50) * 100}%`;
-            document.getElementById('visWaterLabel').textContent = `지하수위: ${waterLevel}m`;
+            
+            // 물 상태 정상화 (액상화 이펙트 초기화)
+            waterLayer.style.top = `${(waterLevel / 50) * 100}%`;
+            waterLayer.classList.replace('bg-yellow-700/60', 'bg-blue-500/40');
+            waterLayer.classList.replace('border-yellow-600/80', 'border-blue-400/80');
+            waterLabel.textContent = `지하수위: ${waterLevel}m`;
+            waterLabel.classList.replace('bg-red-600/90', 'bg-blue-600/80');
+            waterLabel.classList.remove('animate-pulse');
 
-            // 기초 파일 길이 업데이트 (암반층까지 정확히 닿도록)
             document.getElementById('pileLeft').style.height = `${(bedrockDepth / 50) * 100}%`;
             document.getElementById('pileRight').style.height = `${(bedrockDepth / 50) * 100}%`;
 
@@ -343,19 +353,28 @@
             document.getElementById('buildingVisualPile').style.transform = 'rotate(0deg)';
 
             // ==========================================
-            // 위험도 계산 로직
+            // 지진 강도를 반영한 위험도 계산 로직
             // ==========================================
-            let ampRisk = (bedrockDepth / 50) * 100;
-            let liqRisk = 0;
+            // 강도 3.0(영향 거의 없음) ~ 9.0(최대치)를 0~1 비율로 환산
+            const intensityFactor = Math.max(0, (intensity - 3.0) / 6.0); 
 
+            // 기본 증폭 위험도 (강도에 비례)
+            let baseAmpRisk = (bedrockDepth / 50) * 100;
+            let ampRisk = Math.min(100, baseAmpRisk * (intensityFactor * 1.5)); 
+
+            // 액상화 위험도 (물이 있고 모래/토층이 존재할 때)
+            let baseLiqRisk = 0;
             if (waterLevel < bedrockDepth) {
                 const saturatedSoil = bedrockDepth - waterLevel;
                 const shallowWaterFactor = Math.max(0, 20 - waterLevel) / 20; 
                 const soilFactor = Math.min(saturatedSoil, 20) / 20;
-                liqRisk = shallowWaterFactor * soilFactor * 100;
+                baseLiqRisk = shallowWaterFactor * soilFactor * 100;
             }
+            // 액상화는 지진 강도가 높을 때 급격히 발생하므로 가중치 부여
+            let liqRisk = Math.min(100, baseLiqRisk * (intensityFactor * 1.8));
+            globalLiqRisk = liqRisk; // 애니메이션 판별용 변수 저장
 
-            // 1. 일반 기초 (파일 X) - 부지 기본 위험도
+            // 1. 일반 기초 (파일 X) 전체 지수
             const totalRiskNoPile = (ampRisk * 0.4) + (liqRisk * 0.6);
             let scoreNoPile = 100 - totalRiskNoPile;
             scoreNoPile = Math.max(0, Math.min(100, Math.round(scoreNoPile)));
@@ -364,8 +383,7 @@
             else if (scoreNoPile >= 40) currentStatusNoPile = 'Warning';
             else currentStatusNoPile = 'Danger';
 
-            // 2. 파일 기초 (파일 O) - 하중을 암반으로 전달하여 위험 대폭 상쇄
-            // 완전히 무적은 아님 (극단적인 액상화 시 수평 방향 저항 상실 등 반영)
+            // 2. 파일 기초 (파일 O) - 위험 대폭 상쇄
             const totalRiskPile = (ampRisk * 0.2) + (liqRisk * 0.35); 
             let scorePile = 100 - totalRiskPile;
             scorePile = Math.max(0, Math.min(100, Math.round(scorePile)));
@@ -374,41 +392,43 @@
             else if (scorePile >= 40) currentStatusPile = 'Warning';
             else currentStatusPile = 'Danger';
 
-            // 화면 패널에 부지 종합(일반 기초 기준) 점수 표기 업데이트
+            // 화면 패널 업데이트
             document.getElementById('scoreText').textContent = scoreNoPile;
             document.getElementById('ampRiskText').textContent = Math.round(ampRisk) + '%';
             document.getElementById('ampBar').style.width = Math.round(ampRisk) + '%';
             document.getElementById('liqRiskText').textContent = Math.round(liqRisk) + '%';
             document.getElementById('liqBar').style.width = Math.round(liqRisk) + '%';
 
-            // 결과 박스 디자인 변경 (부지 기준)
+            // UI 색상 변경 (부지 기준)
             const resultBox = document.getElementById('resultBox');
             resultBox.className = 'p-6 rounded-2xl shadow-sm border transition-colors duration-300 ' + 
                 (currentStatusNoPile === 'Safe' ? 'text-green-600 bg-green-100 border-green-200' :
                  currentStatusNoPile === 'Warning' ? 'text-amber-600 bg-amber-100 border-amber-200' :
                  'text-red-600 bg-red-100 border-red-200');
 
-            // 아이콘 토글
             document.getElementById('iconSafe').style.display = currentStatusNoPile === 'Safe' ? 'block' : 'none';
             document.getElementById('iconWarning').style.display = currentStatusNoPile === 'Warning' ? 'block' : 'none';
             document.getElementById('iconDanger').style.display = currentStatusNoPile === 'Danger' ? 'block' : 'none';
         }
 
-        // 지진 시뮬레이션 버튼 이벤트
+        // 지진 발생 애니메이션 
         simulateBtn.addEventListener('click', () => {
             if (isShaking) return;
             isShaking = true;
 
+            const intensity = parseFloat(intensitySlider.value);
             const wrapper = document.getElementById('simWrapper');
             const btnSpan = simulateBtn.querySelector('span');
             const btnIcon = simulateBtn.querySelector('svg'); 
+            const waterLayer = document.getElementById('visWaterLayer');
+            const waterLabel = document.getElementById('visWaterLabel');
 
             simulateBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
             simulateBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
             btnSpan.textContent = '지진 발생 중...';
             if (btnIcon) btnIcon.classList.add('animate-spin');
 
-            // 지반 전체 흔들림 (가장 취약한 부지 조건 기준 적용)
+            // 지반 흔들림 강도 (지진 규모가 클수록 가장 격렬한 애니메이션)
             let animClass = currentStatusNoPile === 'Danger' ? 'animate-shake-danger' :
                             currentStatusNoPile === 'Warning' ? 'animate-shake-warning' :
                             'animate-shake-safe';
@@ -418,10 +438,22 @@
             wrapper.classList.add(animClass);
             if(scaleClass) wrapper.classList.add(scaleClass);
 
-            // 지진 흔들림 도중(0.6초 후) 각 건물의 상태에 따른 독립적인 붕괴/크랙 연출
+            // [추가 기능] 액상화 지수 40% 이상, 지진 규모 5.5 이상일 때 수위 상승 (Sand Boil) 애니메이션
+            let isLiquefied = false;
+            if (globalLiqRisk > 40 && intensity >= 5.5) {
+                isLiquefied = true;
+                // 흙탕물로 변하며 지표면(0%)까지 차오름
+                waterLayer.style.top = '0%';
+                waterLayer.classList.replace('bg-blue-500/40', 'bg-yellow-700/60');
+                waterLayer.classList.replace('border-blue-400/80', 'border-yellow-600/80');
+                waterLabel.textContent = '⚠️ 액상화 (모래/지하수 분출)';
+                waterLabel.classList.replace('bg-blue-600/80', 'bg-red-600/90');
+                waterLabel.classList.add('animate-pulse');
+            }
+
+            // 지진 흔들림 도중(0.6초 후) 각 건물의 상태에 따른 파손 연출
             setTimeout(() => {
-                
-                // --- 건물 1: 일반 기초 (파일 없음) 파손 로직 ---
+                // 건물 1: 일반 기초
                 if (currentStatusNoPile === 'Warning') {
                     document.getElementById('crackWarningNoPile').style.opacity = '0.8';
                 } else if (currentStatusNoPile === 'Danger') {
@@ -430,20 +462,17 @@
                     document.getElementById('buildingVisualNoPile').style.transform = 'rotate(8deg)';
                 }
 
-                // --- 건물 2: 파일 기초 (내진 설계) 파손 로직 ---
+                // 건물 2: 파일 기초
                 if (currentStatusPile === 'Warning') {
-                    // 파일 기초는 동일 조건에서도 경미한 크랙만 발생
                     document.getElementById('crackWarningPile').style.opacity = '0.8';
                 } else if (currentStatusPile === 'Danger') {
-                    // 극단적인 위험 상황에서도 일반 건물보다 파손과 기울어짐(3도)이 훨씬 덜함
                     document.getElementById('crackDangerPile').style.opacity = '1';
                     document.getElementById('foundationCrackPile').style.opacity = '1';
                     document.getElementById('buildingVisualPile').style.transform = 'rotate(3deg)';
                 }
-
             }, 600);
 
-            // 2.5초 후 흔들림 종료 (크랙은 슬라이더 조작 전까지 유지됨)
+            // 2.5초 후 흔들림 종료 (상태 복구)
             setTimeout(() => {
                 isShaking = false;
                 wrapper.classList.remove(animClass);
@@ -453,10 +482,22 @@
                 simulateBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
                 btnSpan.textContent = '지진 시뮬레이션 시작';
                 if (btnIcon) btnIcon.classList.remove('animate-spin');
+
+                // 지하수 상승(액상화)이 있었을 경우 서서히 제자리로
+                if (isLiquefied) {
+                    waterLayer.style.top = `${(parseInt(waterSlider.value) / 50) * 100}%`;
+                    waterLayer.classList.replace('bg-yellow-700/60', 'bg-blue-500/40');
+                    waterLayer.classList.replace('border-yellow-600/80', 'border-blue-400/80');
+                    waterLabel.textContent = `지하수위: ${waterSlider.value}m`;
+                    waterLabel.classList.replace('bg-red-600/90', 'bg-blue-600/80');
+                    waterLabel.classList.remove('animate-pulse');
+                }
+
             }, 2500);
         });
 
         // 슬라이더 이벤트 리스너 등록
+        intensitySlider.addEventListener('input', updateSimulation);
         bedrockSlider.addEventListener('input', updateSimulation);
         waterSlider.addEventListener('input', updateSimulation);
 
